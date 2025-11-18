@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Upload from "../components/Upload";
 import { useGenerate } from "../hooks/useGenerate";
 import { useRetry } from "../hooks/useRetry";
@@ -21,7 +21,7 @@ export default function Studio() {
 
   async function fetchHistory() {
     try {
-      const items = await api<GenItem[]>("/generations?limit=5");
+      const items = await api<GenItem[]>("/generations?limit=5");            
       setHistory(items);
     } catch (e) {
       console.warn("failed to fetch history", e);
@@ -29,7 +29,16 @@ export default function Studio() {
   }
 
   async function onGenerate() {
-    if (!imageUpload) return alert("Upload an image first");
+    // Validation before backend request
+    if (!imageUpload) {
+      alert("Please upload an image first");
+      return;
+    }
+    if (!prompt.trim()) {
+      alert("Please enter a prompt");
+      return;
+    }
+
     try {
       const result = await run(async () => {
         const r = await generate({ prompt, style, imageUpload });
@@ -57,7 +66,11 @@ export default function Studio() {
   function onRestore(item: GenItem) {
     setPrompt(item.prompt);
     setStyle(item.style);
-    setImageUpload(item.imageUrl);
+    // Convert the URL to the full image URL for the Upload component
+    const fullImageUrl = item.imageUrl.startsWith('/api') 
+      ? item.imageUrl 
+      : `/api${item.imageUrl}`;
+    setImageUpload(fullImageUrl);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -83,7 +96,7 @@ export default function Studio() {
             
             <div className="mb-5">
               <div className="text-sm font-semibold text-gray-700 mb-2">Upload Image</div>
-              <Upload onChange={setImageUpload} />
+              <Upload value={imageUpload} onChange={setImageUpload} />
             </div>
             
             <label className="block mt-5">
@@ -146,7 +159,7 @@ export default function Studio() {
                   className="w-full text-left p-4 border border-gray-200 rounded-lg flex items-center gap-4 hover:bg-gray-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 >
                   <img 
-                    src={h.imageUrl} 
+                    src={"/api"+h.imageUrl} 
                     alt={h.prompt} 
                     className="w-16 h-16 rounded-lg object-cover shadow-sm" 
                   />

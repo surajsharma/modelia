@@ -12,6 +12,21 @@ export async function initDb() {
   if (fs.existsSync(DB_FILE)) {
     const file = fs.readFileSync(DB_FILE);
     db = new SQL.Database(file);
+
+    // Add migration for existing databases
+    try {
+      // Check if image_url column exists
+      const result = db.exec("PRAGMA table_info(generations)");
+      const columns = result[0]?.values.map(row => row[1]) || [];
+
+      if (!columns.includes('image_url')) {
+        console.log('Migrating database: adding image_url column...');
+        db.exec('ALTER TABLE generations ADD COLUMN image_url TEXT');
+        saveDb();
+      }
+    } catch (e) {
+      console.error('Migration error:', e);
+    }
   } else {
     db = new SQL.Database();
 
@@ -34,7 +49,7 @@ export async function initDb() {
         status TEXT,
         FOREIGN KEY(user_id) REFERENCES users(id)
       );
-  `);
+    `);
 
     saveDb();
   }
