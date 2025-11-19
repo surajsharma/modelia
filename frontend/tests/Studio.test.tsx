@@ -5,9 +5,16 @@ import Studio from '../src/pages/Studio';
 import * as api from '../src/services/api';
 import * as authService from '../src/services/auth';
 
-// Mock the API and auth modules
 vi.mock('../src/services/api');
 vi.mock('../src/services/auth');
+
+// Mock the dark mode hook
+vi.mock('../src/hooks/useDarkMode', () => ({
+    useDarkMode: () => ({
+        isDark: false,
+        toggle: vi.fn(),
+    }),
+}));
 
 describe('Studio Component', () => {
     const mockUser = { id: 1, email: 'test@example.com' };
@@ -32,8 +39,6 @@ describe('Studio Component', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-
-        // Mock successful API calls by default
         vi.mocked(api.getCurrentUser).mockResolvedValue(mockUser);
         vi.mocked(api.api).mockImplementation((endpoint: string) => {
             if (endpoint === '/auth/me') {
@@ -44,8 +49,6 @@ describe('Studio Component', () => {
             }
             return Promise.resolve({});
         });
-
-        // Mock window.location
         delete (window as any).location;
         window.location = { href: '' } as any;
     });
@@ -57,7 +60,6 @@ describe('Studio Component', () => {
     describe('Rendering', () => {
         it('should render upload component', async () => {
             render(<Studio />);
-
             await waitFor(() => {
                 expect(screen.getByText(/click to upload/i)).toBeInTheDocument();
             });
@@ -65,7 +67,6 @@ describe('Studio Component', () => {
 
         it('should render upload area with drag and drop text', async () => {
             render(<Studio />);
-
             await waitFor(() => {
                 expect(screen.getByText(/click to upload/i)).toBeInTheDocument();
                 expect(screen.getByText(/or drag and drop/i)).toBeInTheDocument();
@@ -75,7 +76,6 @@ describe('Studio Component', () => {
 
         it('should render prompt input', async () => {
             render(<Studio />);
-
             await waitFor(() => {
                 expect(screen.getByPlaceholderText('Describe your vision...')).toBeInTheDocument();
             });
@@ -83,29 +83,24 @@ describe('Studio Component', () => {
 
         it('should render style select with all options', async () => {
             render(<Studio />);
-
             await waitFor(() => {
                 const styleSelect = screen.getByRole('combobox');
                 expect(styleSelect).toBeInTheDocument();
-
-                // Check all style options
                 const options = screen.getAllByRole('option');
-                const optionTexts = options.map(opt => opt.textContent);
+                const optionTexts = options.map((opt) => opt.textContent);
                 expect(optionTexts).toEqual(['Classic', 'Editorial', 'Avant-garde', 'Casual']);
             });
         });
 
         it('should render generate button', async () => {
             render(<Studio />);
-
             await waitFor(() => {
-                expect(screen.getByRole('button', { name: /generate/i })).toBeInTheDocument();
+                expect(screen.getByRole('button', { name: /^generate$/i })).toBeInTheDocument();
             });
         });
 
         it('should render abort button', async () => {
             render(<Studio />);
-
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /abort/i })).toBeInTheDocument();
             });
@@ -113,7 +108,6 @@ describe('Studio Component', () => {
 
         it('should display user email', async () => {
             render(<Studio />);
-
             await waitFor(() => {
                 expect(screen.getByText('test@example.com')).toBeInTheDocument();
             });
@@ -121,7 +115,6 @@ describe('Studio Component', () => {
 
         it('should render logout button', async () => {
             render(<Studio />);
-
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
             });
@@ -129,9 +122,15 @@ describe('Studio Component', () => {
 
         it('should render page title', async () => {
             render(<Studio />);
-
             await waitFor(() => {
                 expect(screen.getByText('Modelia AI Studio')).toBeInTheDocument();
+            });
+        });
+
+        it('should render dark mode toggle', async () => {
+            render(<Studio />);
+            await waitFor(() => {
+                expect(screen.getByLabelText(/toggle dark mode/i)).toBeInTheDocument();
             });
         });
     });
@@ -139,23 +138,19 @@ describe('Studio Component', () => {
     describe('Upload Component Interaction', () => {
         it('should show preview after file upload', async () => {
             const user = userEvent.setup();
-
             render(<Studio />);
 
             await waitFor(() => {
                 expect(screen.getByText(/click to upload/i)).toBeInTheDocument();
             });
 
-            // Find the hidden file input
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
-
-            // Create a mock file
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy content'], 'test.png', { type: 'image/png' });
 
-            // Upload the file
             await user.upload(fileInput, file);
 
-            // Wait for the preview to appear
             await waitFor(() => {
                 const preview = screen.getByAltText('Upload preview');
                 expect(preview).toBeInTheDocument();
@@ -164,14 +159,15 @@ describe('Studio Component', () => {
 
         it('should show clear button after upload', async () => {
             const user = userEvent.setup();
-
             render(<Studio />);
 
             await waitFor(() => {
                 expect(screen.getByText(/click to upload/i)).toBeInTheDocument();
             });
 
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy content'], 'test.png', { type: 'image/png' });
 
             await user.upload(fileInput, file);
@@ -183,28 +179,26 @@ describe('Studio Component', () => {
 
         it('should clear preview when clear button is clicked', async () => {
             const user = userEvent.setup();
-
             render(<Studio />);
 
             await waitFor(() => {
                 expect(screen.getByText(/click to upload/i)).toBeInTheDocument();
             });
 
-            // Upload a file
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy content'], 'test.png', { type: 'image/png' });
+
             await user.upload(fileInput, file);
 
-            // Wait for preview
             await waitFor(() => {
                 expect(screen.getByAltText('Upload preview')).toBeInTheDocument();
             });
 
-            // Click clear
             const clearButton = screen.getByRole('button', { name: /clear/i });
             await user.click(clearButton);
 
-            // Verify upload area is shown again
             await waitFor(() => {
                 expect(screen.getByText(/click to upload/i)).toBeInTheDocument();
                 expect(screen.queryByAltText('Upload preview')).not.toBeInTheDocument();
@@ -216,7 +210,6 @@ describe('Studio Component', () => {
         it('should show loading state when generating', async () => {
             const user = userEvent.setup();
 
-            // Mock a delayed API response
             let resolveGenerate: any;
             const generatePromise = new Promise((resolve) => {
                 resolveGenerate = resolve;
@@ -233,31 +226,27 @@ describe('Studio Component', () => {
 
             render(<Studio />);
 
-            // Wait for initial render
             await waitFor(() => {
                 expect(screen.getByPlaceholderText('Describe your vision...')).toBeInTheDocument();
             });
 
-            // Upload file
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
 
-            // Fill in prompt
             const promptInput = screen.getByPlaceholderText('Describe your vision...');
             await user.type(promptInput, 'A beautiful landscape');
 
-            // Click generate
-            const generateButton = screen.getByRole('button', { name: /generate/i });
+            const generateButton = screen.getByRole('button', { name: /^generate$/i });
             await user.click(generateButton);
 
-            // Check loading state
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /generating/i })).toBeInTheDocument();
                 expect(screen.getByRole('button', { name: /generating/i })).toBeDisabled();
             });
 
-            // Resolve the promise
             resolveGenerate({
                 id: 3,
                 prompt: 'A beautiful landscape',
@@ -285,7 +274,6 @@ describe('Studio Component', () => {
                 if (endpoint === '/auth/me') return Promise.resolve(mockUser);
                 if (endpoint === '/generations?limit=5') {
                     callCount++;
-                    // First call returns initial history, second call returns updated history
                     if (callCount === 1) return Promise.resolve(mockHistory);
                     return Promise.resolve([newGeneration, ...mockHistory]);
                 }
@@ -301,25 +289,22 @@ describe('Studio Component', () => {
                 expect(screen.getByPlaceholderText('Describe your vision...')).toBeInTheDocument();
             });
 
-            // Upload file
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
 
-            // Fill in prompt
             const promptInput = screen.getByPlaceholderText('Describe your vision...');
             await user.type(promptInput, 'A beautiful landscape');
 
-            // Click generate
-            const generateButton = screen.getByRole('button', { name: /generate/i });
+            const generateButton = screen.getByRole('button', { name: /^generate$/i });
             await user.click(generateButton);
 
-            // Wait for generation to complete
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /^generate$/i })).not.toBeDisabled();
             });
 
-            // Verify the API was called
             expect(api.api).toHaveBeenCalledWith(
                 '/generations',
                 expect.objectContaining({
@@ -331,7 +316,6 @@ describe('Studio Component', () => {
 
         it('should alert if no image is uploaded', async () => {
             const user = userEvent.setup();
-
             render(<Studio />);
 
             await waitFor(() => {
@@ -341,7 +325,7 @@ describe('Studio Component', () => {
             const promptInput = screen.getByPlaceholderText('Describe your vision...');
             await user.type(promptInput, 'Test prompt');
 
-            const generateButton = screen.getByRole('button', { name: /generate/i });
+            const generateButton = screen.getByRole('button', { name: /^generate$/i });
             await user.click(generateButton);
 
             expect(window.alert).toHaveBeenCalledWith('Please upload an image first');
@@ -349,19 +333,19 @@ describe('Studio Component', () => {
 
         it('should alert if prompt is empty', async () => {
             const user = userEvent.setup();
-
             render(<Studio />);
 
             await waitFor(() => {
                 expect(screen.getByText(/click to upload/i)).toBeInTheDocument();
             });
 
-            // Upload image
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
 
-            const generateButton = screen.getByRole('button', { name: /generate/i });
+            const generateButton = screen.getByRole('button', { name: /^generate$/i });
             await user.click(generateButton);
 
             expect(window.alert).toHaveBeenCalledWith('Please enter a prompt');
@@ -369,7 +353,6 @@ describe('Studio Component', () => {
 
         it('should allow selecting different styles', async () => {
             const user = userEvent.setup();
-
             render(<Studio />);
 
             await waitFor(() => {
@@ -422,19 +405,18 @@ describe('Studio Component', () => {
                 expect(screen.getByPlaceholderText('Describe your vision...')).toBeInTheDocument();
             });
 
-            // Upload file
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
 
-            // Fill in prompt
             const promptInput = screen.getByPlaceholderText('Describe your vision...');
             await user.type(promptInput, 'Test');
 
-            const generateButton = screen.getByRole('button', { name: /generate/i });
+            const generateButton = screen.getByRole('button', { name: /^generate$/i });
             await user.click(generateButton);
 
-            // Wait for all retries to complete
             await waitFor(
                 () => {
                     expect(attemptCount).toBe(3);
@@ -463,19 +445,18 @@ describe('Studio Component', () => {
                 expect(screen.getByPlaceholderText('Describe your vision...')).toBeInTheDocument();
             });
 
-            // Upload file
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
 
-            // Fill in prompt
             const promptInput = screen.getByPlaceholderText('Describe your vision...');
             await user.type(promptInput, 'Test');
 
-            const generateButton = screen.getByRole('button', { name: /generate/i });
+            const generateButton = screen.getByRole('button', { name: /^generate$/i });
             await user.click(generateButton);
 
-            // Wait for error alert
             await waitFor(
                 () => {
                     expect(window.alert).toHaveBeenCalledWith('Server error');
@@ -504,19 +485,18 @@ describe('Studio Component', () => {
                 expect(screen.getByPlaceholderText('Describe your vision...')).toBeInTheDocument();
             });
 
-            // Upload file
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
 
-            // Fill in prompt
             const promptInput = screen.getByPlaceholderText('Describe your vision...');
             await user.type(promptInput, 'Test');
 
-            const generateButton = screen.getByRole('button', { name: /generate/i });
+            const generateButton = screen.getByRole('button', { name: /^generate$/i });
             await user.click(generateButton);
 
-            // Wait for error alert
             await waitFor(
                 () => {
                     expect(window.alert).toHaveBeenCalledWith(
@@ -549,19 +529,18 @@ describe('Studio Component', () => {
                 expect(screen.getByPlaceholderText('Describe your vision...')).toBeInTheDocument();
             });
 
-            // Upload file
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
 
-            // Fill in prompt
             const promptInput = screen.getByPlaceholderText('Describe your vision...');
             await user.type(promptInput, 'Test');
 
-            const generateButton = screen.getByRole('button', { name: /generate/i });
+            const generateButton = screen.getByRole('button', { name: /^generate$/i });
             await user.click(generateButton);
 
-            // Should only attempt once
             await waitFor(() => {
                 expect(attemptCount).toBe(1);
                 expect(window.alert).toHaveBeenCalledWith('Bad request');
@@ -594,34 +573,29 @@ describe('Studio Component', () => {
                 expect(screen.getByPlaceholderText('Describe your vision...')).toBeInTheDocument();
             });
 
-            // Upload file
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
 
-            // Fill in prompt
             const promptInput = screen.getByPlaceholderText('Describe your vision...');
             await user.type(promptInput, 'Test');
 
-            // Click generate
-            const generateButton = screen.getByRole('button', { name: /generate/i });
+            const generateButton = screen.getByRole('button', { name: /^generate$/i });
             await user.click(generateButton);
 
-            // Verify loading state
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /generating/i })).toBeInTheDocument();
             });
 
-            // Click abort
             const abortButton = screen.getByRole('button', { name: /abort/i });
             await user.click(abortButton);
 
-            // Verify abort was called
             await waitFor(() => {
                 expect(window.alert).toHaveBeenCalledWith('Generation aborted');
             });
 
-            // Verify button is no longer in loading state
             expect(screen.getByRole('button', { name: /^generate$/i })).toBeInTheDocument();
         });
 
@@ -641,7 +615,7 @@ describe('Studio Component', () => {
                 if (endpoint === '/auth/me') return Promise.resolve(mockUser);
                 if (endpoint === '/generations?limit=5') return Promise.resolve(mockHistory);
                 if (endpoint === '/generations' && options?.method === 'POST') {
-                    return new Promise(() => { }); // Never resolves
+                    return new Promise(() => { });
                 }
                 return Promise.resolve({});
             });
@@ -652,20 +626,18 @@ describe('Studio Component', () => {
                 expect(screen.getByPlaceholderText('Describe your vision...')).toBeInTheDocument();
             });
 
-            // Upload file
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
 
-            // Fill in prompt
             const promptInput = screen.getByPlaceholderText('Describe your vision...');
             await user.type(promptInput, 'Test');
 
-            // Click generate
-            const generateButton = screen.getByRole('button', { name: /generate/i });
+            const generateButton = screen.getByRole('button', { name: /^generate$/i });
             await user.click(generateButton);
 
-            // Verify abort button is enabled
             await waitFor(() => {
                 const abortButton = screen.getByRole('button', { name: /abort/i });
                 expect(abortButton).not.toBeDisabled();
@@ -698,34 +670,29 @@ describe('Studio Component', () => {
                 expect(screen.getByPlaceholderText('Describe your vision...')).toBeInTheDocument();
             });
 
-            // Upload file
-            const fileInput = screen.getByLabelText(/click to upload/i, { selector: 'input[type="file"]' });
+            const fileInput = screen.getByLabelText(/click to upload/i, {
+                selector: 'input[type="file"]',
+            });
             const file = new File(['dummy'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
 
-            // Fill in prompt
             const promptInput = screen.getByPlaceholderText('Describe your vision...');
             await user.type(promptInput, 'Test');
 
-            // Click generate
-            const generateButton = screen.getByRole('button', { name: /generate/i });
+            const generateButton = screen.getByRole('button', { name: /^generate$/i });
             await user.click(generateButton);
 
-            // Wait for loading state
             await waitFor(() => {
                 expect(screen.getByRole('button', { name: /generating/i })).toBeInTheDocument();
             });
 
-            // Click abort
             const abortButton = screen.getByRole('button', { name: /abort/i });
             await user.click(abortButton);
 
-            // Wait for abort to complete
             await waitFor(() => {
                 expect(window.alert).toHaveBeenCalledWith('Generation aborted');
             });
 
-            // Should only have attempted once (no retries)
             expect(attemptCount).toBe(1);
         });
     });
@@ -745,7 +712,7 @@ describe('Studio Component', () => {
 
             await waitFor(() => {
                 const images = screen.getAllByRole('img');
-                const historyImages = images.filter(img =>
+                const historyImages = images.filter((img) =>
                     img.getAttribute('src')?.includes('/api/uploads')
                 );
                 expect(historyImages.length).toBeGreaterThan(0);
@@ -754,30 +721,28 @@ describe('Studio Component', () => {
 
         it('should restore prompt, style, and image when history item is clicked', async () => {
             const user = userEvent.setup();
-
             render(<Studio />);
 
             await waitFor(() => {
                 expect(screen.getByText('Test prompt')).toBeInTheDocument();
             });
 
-            // Click on first history item
             const historyButtons = screen.getAllByRole('button');
-            const historyItem = historyButtons.find(btn => btn.textContent?.includes('Classic'));
+            const historyItem = historyButtons.find((btn) => btn.textContent?.includes('Classic'));
             expect(historyItem).toBeInTheDocument();
+
             await user.click(historyItem!);
 
-            // Verify form fields are populated
-            const promptInput = screen.getByPlaceholderText('Describe your vision...') as HTMLInputElement;
+            const promptInput = screen.getByPlaceholderText(
+                'Describe your vision...'
+            ) as HTMLInputElement;
             expect(promptInput.value).toBe('Test prompt');
 
             const styleSelect = screen.getByRole('combobox') as HTMLSelectElement;
             expect(styleSelect.value).toBe('Classic');
 
-            // Verify scroll was called
             expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
 
-            // Verify image preview is shown
             await waitFor(() => {
                 expect(screen.getByAltText('Upload preview')).toBeInTheDocument();
             });
@@ -802,7 +767,6 @@ describe('Studio Component', () => {
             render(<Studio />);
 
             await waitFor(() => {
-                // Check that dates are rendered (format will depend on locale)
                 const dateElements = screen.getAllByText(/\d{1,2}\/\d{1,2}\/\d{4}/);
                 expect(dateElements.length).toBeGreaterThan(0);
             });
@@ -812,7 +776,6 @@ describe('Studio Component', () => {
     describe('Logout', () => {
         it('should call logout and redirect when logout button is clicked', async () => {
             const user = userEvent.setup();
-
             render(<Studio />);
 
             await waitFor(() => {
