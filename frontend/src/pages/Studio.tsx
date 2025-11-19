@@ -5,7 +5,14 @@ import { useRetry } from "../hooks/useRetry";
 import { api, getCurrentUser } from "../services/api";
 import { logout } from "../services/auth";
 
-type GenItem = { id: number; prompt: string; style: string; imageUrl: string; createdAt: string; status: string };
+type GenItem = {
+  id: number;
+  prompt: string;
+  style: string;
+  imageUrl: string;
+  createdAt: string;
+  status: string;
+};
 
 export default function Studio() {
   const [user, setUser] = useState<{ id: number; email: string } | null>(null);
@@ -15,7 +22,6 @@ export default function Studio() {
   const [history, setHistory] = useState<GenItem[]>([]);
   const { loading, generate, abort } = useGenerate();
   const { run } = useRetry(3, 400);
-
 
   useEffect(() => {
     fetchUser();
@@ -41,7 +47,6 @@ export default function Studio() {
   }
 
   async function onGenerate() {
-    // Validation before backend request
     if (!imageUpload) {
       alert("Please upload an image first");
       return;
@@ -52,16 +57,17 @@ export default function Studio() {
     }
 
     try {
-      const result = await run(async () => {
-        const r = await generate({ prompt, style, imageUpload });
-        if ((r as any).aborted) throw new Error("aborted");
-        return r;
-      }, (attempt) => {
-        console.log("retry attempt", attempt);
-      });
-      setHistory(h => [result as GenItem, ...h].slice(0, 5));
+      const result = await run(
+        async () => {
+          return await generate({ prompt, style, imageUpload });
+        },
+        (attempt) => {
+          console.log("retry attempt", attempt);
+        }
+      );
+      setHistory((h) => [result as GenItem, ...h].slice(0, 5));
     } catch (err: any) {
-      if (err.message === "aborted") {
+      if (err.message === "aborted" || err.name === "AbortError") {
         alert("Generation aborted");
         return;
       }
@@ -78,7 +84,6 @@ export default function Studio() {
   function onRestore(item: GenItem) {
     setPrompt(item.prompt);
     setStyle(item.style);
-    // Convert the URL to the full image URL for the Upload component
     const fullImageUrl = item.imageUrl.startsWith('/api')
       ? item.imageUrl
       : `/api${item.imageUrl}`;
@@ -93,19 +98,21 @@ export default function Studio() {
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Modelia AI Studio</h1>
-            <p>{user?.email}</p>
+            <p className="text-sm text-gray-600 mt-1">{user?.email}</p>
           </div>
           <button
-            onClick={() => { logout(); window.location.href = "/login"; }}
+            onClick={() => {
+              logout();
+              window.location.href = "/login";
+            }}
             className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
           >
             Logout
           </button>
         </div>
 
-        {/* Main Content */}
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Generation Section */}
+          {/* Create Generation */}
           <section className="bg-white rounded-xl shadow-lg p-8">
             <h2 className="text-xl font-bold text-gray-800 mb-6">Create Generation</h2>
 
@@ -119,7 +126,7 @@ export default function Studio() {
               <input
                 aria-label="Prompt"
                 value={prompt}
-                onChange={e => setPrompt(e.target.value)}
+                onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Describe your vision..."
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-blue-500 transition-all"
               />
@@ -129,7 +136,7 @@ export default function Studio() {
               <div className="text-sm font-semibold text-gray-700 mb-2">Style</div>
               <select
                 value={style}
-                onChange={e => setStyle(e.target.value)}
+                onChange={(e) => setStyle(e.target.value)}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-blue-500 transition-all"
               >
                 <option>Classic</option>
@@ -149,15 +156,16 @@ export default function Studio() {
                 {loading ? "Generating…" : "Generate"}
               </button>
               <button
-                onClick={() => abort()}
-                className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                onClick={abort}
+                disabled={!loading}
+                className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Abort
               </button>
             </div>
           </section>
 
-          {/* History Section */}
+          {/* Recent Generations */}
           <aside className="bg-white rounded-xl shadow-lg p-8">
             <h2 className="text-xl font-bold text-gray-800 mb-6">Recent Generations</h2>
             <div className="space-y-3">
@@ -167,7 +175,7 @@ export default function Studio() {
                   <p className="text-xs mt-1">Your creations will appear here</p>
                 </div>
               )}
-              {history.map(h => (
+              {history.map((h) => (
                 <button
                   key={h.id}
                   onClick={() => onRestore(h)}
@@ -180,7 +188,8 @@ export default function Studio() {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-gray-800 truncate">{h.style}</div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-gray-500 mt-1 truncate">{h.prompt}</div>
+                    <div className="text-xs text-gray-400 mt-1">
                       {new Date(h.createdAt).toLocaleString()}
                     </div>
                   </div>

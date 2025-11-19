@@ -6,8 +6,8 @@
 | Exponential retry logic      | ✅           | /frontend/src/hooks/useRetry.ts     |
 | 20% simulated overload       | ✅           | /backend/src/routes/generations.ts  |
 | GET last 5 generations       | ✅           | /backend/src/routes/generations.ts  |
-| Unit tests backend           |             | /backend/tests/auth.test.ts         |
-| Unit tests frontend          |             | /frontend/tests/Generate.test.tsx   |
+| Unit tests backend           | ✅           | /backend/tests/auth.test.ts         |
+| Unit tests frontend          | ✅           | /frontend/tests/Studio.test.tsx     |
 | E2E flow                     |             | /tests/e2e.spec.ts                  |
 | ESLint + Prettier configured |             | .eslintrc.js                        |
-| CI + Coverage report         |             | .github/workflows/ci.yml            |
+| CI + Coverage report         | ✅           | .github/workflows/ci.yml            |

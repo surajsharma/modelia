@@ -1,46 +1,52 @@
-import { useRef, useState, useCallback } from "react";
+import { useState, useRef } from "react";
+import { api } from "../services/api";
+
+type GenerateParams = {
+    prompt: string;
+    style: string;
+    imageUpload: string;
+};
+
+type GenerateResult = {
+    id: number;
+    prompt: string;
+    style: string;
+    imageUrl: string;
+    createdAt: string;
+    status: string;
+};
 
 export function useGenerate() {
     const [loading, setLoading] = useState(false);
-    const controllerRef = useRef<AbortController | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
-    const generate = useCallback(async (payload: { prompt: string; style: string; imageUpload: string }) => {
+    const generate = async (params: GenerateParams): Promise<GenerateResult> => {
+        abortControllerRef.current = new AbortController();
         setLoading(true);
-        controllerRef.current = new AbortController();
         try {
-            const token = localStorage.getItem("ai_token");
-            const res = await fetch("/api/generations", {
+            const result = await api<GenerateResult>("/generations", {
                 method: "POST",
-                body: JSON.stringify(payload),
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-                signal: controllerRef.current.signal
+                body: JSON.stringify(params),
+                signal: abortControllerRef.current.signal,
             });
-            const text = await res.text();
-            const data = text ? JSON.parse(text) : null;
-            setLoading(false);
-            if (!res.ok) {
-                const err: any = new Error(data?.message || res.statusText);
-                err.status = res.status;
-                err.body = data;
-                throw err;
-            }
-            return data;
+            return result;
         } catch (err: any) {
-            setLoading(false);
-            if (err?.name === "AbortError") return { aborted: true };
+            if (err.name === "AbortError") {
+                throw new Error("aborted");
+            }
             throw err;
         } finally {
-            controllerRef.current = null;
+            setLoading(false);
+            abortControllerRef.current = null;
         }
-    }, []);
+    };
 
-    const abort = useCallback(() => {
-        controllerRef.current?.abort();
-        controllerRef.current = null;
-    }, []);
+    const abort = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            setLoading(false);
+        }
+    };
 
     return { loading, generate, abort };
 }

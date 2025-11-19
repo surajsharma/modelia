@@ -1,0 +1,451 @@
+openapi: 3.0.3
+info:
+  title: Modelia API
+  description: Backend API for image generation service
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@modelia.example.com
+
+servers:
+  - url: http://localhost:4000
+    description: Local development server
+  - url: https://api.modelia.example.com
+    description: Production server
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Generations
+    description: Image generation management
+  - name: Static
+    description: Static file serving
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login or signup
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          format: email
+          example: user@example.com
+      required:
+        - id
+        - email
+
+    AuthToken:
+      type: object
+      properties:
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      required:
+        - token
+
+    SignupRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          minLength: 6
+          example: password123
+      required:
+        - email
+        - password
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          minLength: 1
+          example: password123
+      required:
+        - email
+        - password
+
+    CreateGenerationRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+          example: A beautiful sunset over mountains
+        style:
+          type: string
+          minLength: 1
+          example: realistic
+        imageUpload:
+          type: string
+          format: byte
+          description: Base64 encoded image data URL
+          example: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA...
+      required:
+        - prompt
+        - style
+        - imageUpload
+
+    Generation:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        prompt:
+          type: string
+          example: A beautiful sunset over mountains
+        style:
+          type: string
+          example: realistic
+        imageUrl:
+          type: string
+          nullable: true
+          example: /uploads/1/a1b2c3d4-e5f6-7890-abcd-ef1234567890.png
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        status:
+          type: string
+          enum: [succeeded, failed, pending]
+          example: succeeded
+      required:
+        - id
+        - prompt
+        - style
+        - imageUrl
+        - createdAt
+        - status
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Invalid input
+        issues:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              path:
+                type: array
+                items:
+                  type: string
+              message:
+                type: string
+
+    HealthCheck:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+
+paths:
+  /:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check if the API is running
+      responses:
+        "200":
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthCheck"
+
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Create a new user account
+      description: Register a new user with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "200":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthToken"
+        "400":
+          description: Invalid input (validation error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                message: Invalid input
+                issues:
+                  - code: invalid_format
+                    path: [email]
+                    message: Invalid email address
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                message: Email already exists
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login to existing account
+      description: Authenticate user with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthToken"
+        "400":
+          description: Invalid input (validation error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                message: Invalid credentials
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user information
+      description: Retrieve information about the authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                message: Unauthorized
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                message: User not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /generations:
+    get:
+      tags:
+        - Generations
+      summary: Get user's generations
+      description: Retrieve a list of image generations for the authenticated user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of generations to return (max 50)
+          required: false
+          schema:
+            type: integer
+            default: 5
+            minimum: 1
+            maximum: 50
+            example: 10
+      responses:
+        "200":
+          description: List of generations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Generation"
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                message: Unauthorized
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags:
+        - Generations
+      summary: Create a new generation
+      description: Create a new image generation with prompt, style, and image upload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGenerationRequest"
+      responses:
+        "201":
+          description: Generation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Generation"
+        "400":
+          description: Invalid input (validation error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                message: Invalid input
+                issues:
+                  - code: too_small
+                    path: [prompt]
+                    message: Too small expected string to have >=1 characters
+        "401":
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                message: Unauthorized
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Model overloaded (simulated random error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                message: Model overloaded
+
+  /uploads/{userId}/{filename}:
+    get:
+      tags:
+        - Static
+      summary: Get uploaded image
+      description: Retrieve an uploaded image file
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: User ID who owns the image
+          schema:
+            type: integer
+            example: 1
+        - name: filename
+          in: path
+          required: true
+          description: Image filename
+          schema:
+            type: string
+            example: a1b2c3d4-e5f6-7890-abcd-ef1234567890.png
+      responses:
+        "200":
+          description: Image file
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/jpg:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                message: Image not found
+
+security: []

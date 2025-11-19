@@ -1,13 +1,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from '@tailwindcss/vite'
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
     proxy: {
-      // forward /api/* to backend on 4000
       "/api": {
         target: "http://localhost:4000",
         changeOrigin: true,
@@ -15,4 +14,20 @@ export default defineConfig({
       },
     },
   },
-});
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './tests/setup.ts',
+    css: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'tests/',
+        '**/*.config.ts',
+        '**/*.d.ts',
+      ],
+    },
+  },
+} as any); // Type assertion as fallback

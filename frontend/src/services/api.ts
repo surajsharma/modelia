@@ -1,20 +1,71 @@
-export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
-    const token = localStorage.getItem("ai_token");
-    const headers: Record<string, string> = { ...(opts.headers as any || {}), "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const resp = await fetch(`/api${path}`, { ...opts, headers });
-    const text = await resp.text();
-    const data = text ? JSON.parse(text) : null;
-    if (!resp.ok) {
-        const err = new Error(data?.message || resp.statusText || "API error");
-        (err as any).status = resp.status;
-        (err as any).body = data;
-        throw err;
-    }
-    return data as T;
-}
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
+type ApiOptions = {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+    signal?: AbortSignal;
+};
+
+export async function api<T>(
+    endpoint: string,
+    options: ApiOptions = {}
+): Promise<T> {
+    const token = localStorage.getItem("ai_token"); // Changed from "token" to "ai_token"
+
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...options.headers,
+    };
+
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+        method: options.method || "GET",
+        headers,
+        body: options.body,
+        signal: options.signal,
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error: any = new Error(errorData.message || "Request failed");
+        error.status = response.status;
+        error.data = errorData;
+        throw error;
+    }
+
+    return response.json();
+}
 
 export async function getCurrentUser() {
     return api<{ id: number; email: string }>("/auth/me");
+}
+
+export async function signup(email: string, password: string) {
+    const { token } = await api<{ token: string }>("/auth/signup", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+    });
+    localStorage.setItem("ai_token", token);
+    return { token };
+}
+
+export async function login(email: string, password: string) {
+    const { token } = await api<{ token: string }>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+    });
+    localStorage.setItem("ai_token", token);
+    return { token };
+}
+
+export function logout() {
+    localStorage.removeItem("ai_token");
+}
+
+export function getToken() {
+    return localStorage.getItem("ai_token");
 }
