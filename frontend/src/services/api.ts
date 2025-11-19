@@ -11,8 +11,7 @@ export async function api<T>(
     endpoint: string,
     options: ApiOptions = {}
 ): Promise<T> {
-    const token = localStorage.getItem("ai_token"); // Changed from "token" to "ai_token"
-
+    const token = localStorage.getItem("ai_token");
     const headers: Record<string, string> = {
         "Content-Type": "application/json",
         ...options.headers,

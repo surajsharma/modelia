@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from '@tailwindcss/vite';
 
@@ -10,7 +10,7 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:4000",
         changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/api/, ""),
+        rewrite: (p: string) => p.replace(/^\/api/, ""), // Add type annotation
       },
     },
   },
@@ -25,9 +25,9 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'tests/',
-        '**/*.config.ts',
-        '**/*.d.ts',
+        '*.config.ts',
+        '*.d.ts',
       ],
     },
   },
-} as any); // Type assertion as fallback
+});
