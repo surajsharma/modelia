@@ -75,14 +75,21 @@ pnpm docker:test
 ```
 
 ## Bonuses (optional)
-- Image resizing before upload (max width 1920px).
+- ✅ Image resizing before upload (max width 1920px).
 - Code splitting and lazy loading.
 - Caching static assets and using a CDN.
-- Add a dark mode toggle.
+- ✅ Add a dark mode toggle.
 - Small UI animation (Framer Motion or CSS transitions).
 
-## other deliverables
+## CI/CD
+
+- ✅ runs all unit tests
+- ✅ runs all e2e tests
+- ✅ ensures both pass
+
+## Other deliverables
 
 - [AI_USAGE](./AI_USAGE.md)
 - [EVAL](./EVAL.md)
-- [OPENAPI.YAML](./backend/OPENAPI.yaml), API docs are at [localhost:4000/api-docs/](localhost:4000/api-docs/) while the app is up
+- [OPENAPI.YAML](./backend/OPENAPI.yaml)
+  - API docs are at [localhost:4000/api-docs/](127.0.0.1:4000/api-docs/) while the app is up

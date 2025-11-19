@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode */
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Your custom theme variables can go here if needed */
+}
+
 body {
   font-family: system-ui, -apple-system, sans-serif;
 }
