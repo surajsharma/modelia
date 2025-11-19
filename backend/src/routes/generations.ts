@@ -5,6 +5,7 @@ import { getDb, saveDb } from "../models/db";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import sharp from "sharp";
 
 const router = express.Router();
 
@@ -14,16 +15,21 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
+// Image processing config
+const MAX_WIDTH = 1920;
+const JPEG_QUALITY = 90;
+
 const createSchema = z.object({
   prompt: z.string().min(1),
   style: z.string().min(1),
-  // imageUpload is base64 or data URL
   imageUpload: z.string().min(1)
 });
 
-// Helper function to save base64/dataURL to disk
-// Returns: "userId/filename.ext" (relative path, no /uploads prefix)
-function saveImageToDisk(dataUrl: string, userId: number): string {
+/**
+ * Save base64/dataURL to disk with automatic resizing
+ * Returns: "userId/filename.ext" (relative path, no /uploads prefix)
+ */
+async function saveImageToDisk(dataUrl: string, userId: number): Promise<string> {
   console.log("Saving image for user:", userId);
 
   const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
@@ -36,30 +42,65 @@ function saveImageToDisk(dataUrl: string, userId: number): string {
   const mimeType = matches[1];
   const base64Data = matches[2];
 
-  // Get file extension from mime type
-  const ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
+  const inputBuffer = Buffer.from(base64Data, 'base64');
 
-  // Create user-specific directory
   const userDir = path.join(UPLOADS_DIR, userId.toString());
-
   if (!fs.existsSync(userDir)) {
     fs.mkdirSync(userDir, { recursive: true });
   }
 
-  // Generate unique filename
+  let ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+  let finalBuffer: Buffer = inputBuffer; // Add explicit Buffer type
+  let processed = false;
+
+  try {
+    const sharp = (await import('sharp')).default;
+    const metadata = await sharp(inputBuffer).metadata();
+
+    console.log(`Original: ${metadata.width}x${metadata.height}, format: ${metadata.format}`);
+
+    const MAX_WIDTH = 1920;
+    let processedImage = sharp(inputBuffer);
+
+    // Resize if needed
+    if (metadata.width && metadata.width > MAX_WIDTH) {
+      console.log(`Resizing from ${metadata.width}px to ${MAX_WIDTH}px width`);
+      processedImage = processedImage.resize(MAX_WIDTH, null, {
+        fit: 'inside',
+        withoutEnlargement: true
+      });
+    }
+
+    // Convert to JPEG
+    finalBuffer = await processedImage
+      .jpeg({ quality: 90, progressive: true })
+      .toBuffer();
+
+    ext = 'jpg';
+    processed = true;
+
+    const reduction = ((1 - finalBuffer.length / inputBuffer.length) * 100).toFixed(1);
+    console.log(`Processed: ${(finalBuffer.length / 1024).toFixed(1)}KB (${reduction}% reduction)`);
+  } catch (error) {
+    console.warn('Sharp processing failed, saving original:', error instanceof Error ? error.message : error);
+    // Use original buffer as fallback
+    finalBuffer = inputBuffer;
+    processed = false;
+  }
+
   const filename = `${crypto.randomUUID()}.${ext}`;
   const filepath = path.join(userDir, filename);
 
-  // Convert base64 to buffer and save
-  const buffer = Buffer.from(base64Data, 'base64');
-  fs.writeFileSync(filepath, buffer);
+  fs.writeFileSync(filepath, finalBuffer);
 
-  console.log("File saved to:", filepath);
+  if (processed) {
+    console.log(`Image saved (processed): ${filepath}`);
+  } else {
+    console.log(`Image saved (original, no processing): ${filepath}`);
+  }
 
-  // IMPORTANT: Return relative path without /uploads prefix
   return `${userId}/${filename}`;
 }
-
 
 router.post("/", requireAuth, async (req: AuthRequest, res) => {
   let imagePath: string | null = null;
@@ -77,8 +118,8 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
       return res.status(503).json({ message: "Model overloaded" });
     }
 
-    // Save image to disk and get relative path (userId/filename)
-    imagePath = saveImageToDisk(parsed.imageUpload, req.userId!);
+    // Save and resize image to disk
+    imagePath = await saveImageToDisk(parsed.imageUpload, req.userId!);
     console.log("Image path to store in DB:", imagePath);
 
     const db = getDb();
