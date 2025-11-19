@@ -9,5 +9,5 @@
 | Unit tests backend           | ✅           | /backend/tests/auth.test.ts         |
 | Unit tests frontend          | ✅           | /frontend/tests/Studio.test.tsx     |
 | E2E flow                     |             | /tests/e2e.spec.ts                  |
-| ESLint + Prettier configured |             | .eslintrc.js                        |
+| ESLint + Prettier configured | ✅           | .eslintrc.json                      |
 | CI + Coverage report         | ✅           | .github/workflows/ci.yml            |
