@@ -50,7 +50,7 @@ async function saveImageToDisk(dataUrl: string, userId: number): Promise<string>
   }
 
   let ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
-  let finalBuffer = inputBuffer;
+  let finalBuffer: Buffer = inputBuffer; // Add explicit Buffer type
   let processed = false;
 
   try {
