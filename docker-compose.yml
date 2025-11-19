@@ -40,7 +40,7 @@ services:
   e2e:
     build:
       context: .
-      dockerfile: Dockerfile.e2e
+      dockerfile: Dockerfile
     environment:
       - CI=${CI:-false}
     depends_on:
