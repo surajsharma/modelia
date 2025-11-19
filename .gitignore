@@ -41,3 +41,26 @@ Thumbs.db
 
 # Docker
 *.log
+
+# Dependencies
+node_modules/
+*/node_modules/
+pnpm-lock.yaml
+
+# E2E test artifacts
+/playwright-report/
+/test-results/
+/playwright/.cache/
+
+# Backend
+backend/data.db
+backend/uploads/
+backend/dist/
+backend/coverage/
+
+# Frontend
+frontend/dist/
+frontend/coverage/
+
+# Docker
+docker-compose.override.yml

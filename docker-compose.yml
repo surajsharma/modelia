@@ -40,15 +40,19 @@ services:
   e2e:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.e2e
     environment:
-      - CI=true
+      - CI=${CI:-false}
     depends_on:
       backend:
         condition: service_healthy
       frontend:
         condition: service_healthy
     network_mode: "host"
+    volumes:
+      # Mount these directories for CI artifact collection
+      - ./playwright-report:/app/playwright-report
+      - ./test-results:/app/test-results
 
 volumes:
   backend-data:

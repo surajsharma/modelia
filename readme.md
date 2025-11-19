@@ -28,7 +28,7 @@
 - run `pnpm test` to run unit tests
 
 
-## e2e tests
+## e2e tests with playwright
 
 - in the root directory, this single command - builds, runs tests, exits
   
