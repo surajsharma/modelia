@@ -18,8 +18,9 @@ RUN npm install -g pnpm@10.18.2
 # Copy package files and npmrc
 COPY package.json pnpm-lock.yaml* .npmrc* ./
 
-# Install dependencies (build scripts will run via .npmrc)
-RUN pnpm install --frozen-lockfile
+# Install dependencies with build scripts enabled
+RUN pnpm config set enable-pre-post-scripts true && \
+    pnpm install --frozen-lockfile
 
 # Copy source
 COPY . .

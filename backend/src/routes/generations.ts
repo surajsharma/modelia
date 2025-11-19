@@ -30,7 +30,7 @@ const createSchema = z.object({
  * Returns: "userId/filename.ext" (relative path, no /uploads prefix)
  */
 async function saveImageToDisk(dataUrl: string, userId: number): Promise<string> {
-  console.log("Saving and resizing image for user:", userId);
+  console.log("Saving image for user:", userId);
 
   const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
 
@@ -42,68 +42,64 @@ async function saveImageToDisk(dataUrl: string, userId: number): Promise<string>
   const mimeType = matches[1];
   const base64Data = matches[2];
 
-  // Get file extension from mime type
-  let ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+  const inputBuffer = Buffer.from(base64Data, 'base64');
 
-  // Create user-specific directory
   const userDir = path.join(UPLOADS_DIR, userId.toString());
-
   if (!fs.existsSync(userDir)) {
     fs.mkdirSync(userDir, { recursive: true });
   }
 
-  // Generate unique filename
-  const filename = `${crypto.randomUUID()}.${ext}`;
-  const filepath = path.join(userDir, filename);
-
-  // Convert base64 to buffer
-  const inputBuffer = Buffer.from(base64Data, 'base64');
+  let ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+  let finalBuffer = inputBuffer;
+  let processed = false;
 
   try {
-    // Get image metadata to check dimensions
+    const sharp = (await import('sharp')).default;
     const metadata = await sharp(inputBuffer).metadata();
-    console.log(`Original image: ${metadata.width}x${metadata.height}, format: ${metadata.format}`);
 
-    // Resize image if width exceeds MAX_WIDTH
+    console.log(`Original: ${metadata.width}x${metadata.height}, format: ${metadata.format}`);
+
+    const MAX_WIDTH = 1920;
     let processedImage = sharp(inputBuffer);
 
+    // Resize if needed
     if (metadata.width && metadata.width > MAX_WIDTH) {
-      console.log(`Resizing image from ${metadata.width}px to ${MAX_WIDTH}px width`);
+      console.log(`Resizing from ${metadata.width}px to ${MAX_WIDTH}px width`);
       processedImage = processedImage.resize(MAX_WIDTH, null, {
         fit: 'inside',
         withoutEnlargement: true
       });
     }
 
-    // Convert to JPEG for consistency and compression
-    const buffer = await processedImage
-      .jpeg({
-        quality: JPEG_QUALITY,
-        progressive: true
-      })
+    // Convert to JPEG
+    finalBuffer = await processedImage
+      .jpeg({ quality: 90, progressive: true })
       .toBuffer();
 
-    // Update extension to jpg since we're converting to JPEG
     ext = 'jpg';
-    const finalFilename = `${crypto.randomUUID()}.${ext}`;
-    const finalFilepath = path.join(userDir, finalFilename);
+    processed = true;
 
-    // Save processed image to disk
-    fs.writeFileSync(finalFilepath, buffer);
-
-    const finalSize = buffer.length;
-    const originalSize = inputBuffer.length;
-    const reduction = ((1 - finalSize / originalSize) * 100).toFixed(1);
-
-    console.log(`Image saved to: ${finalFilepath}`);
-    console.log(`Size: ${(finalSize / 1024).toFixed(1)}KB (${reduction}% reduction)`);
-
-    // Return relative path without /uploads prefix
-    return `${userId}/${finalFilename}`;
+    const reduction = ((1 - finalBuffer.length / inputBuffer.length) * 100).toFixed(1);
+    console.log(`Processed: ${(finalBuffer.length / 1024).toFixed(1)}KB (${reduction}% reduction)`);
   } catch (error) {
-    console.error("Error processing image with sharp:", error);
-    throw new Error("Failed to process image");
+    console.warn('Sharp processing failed, saving original:', error instanceof Error ? error.message : error);
+    // Use original buffer as fallback
+    finalBuffer = inputBuffer;
+    processed = false;
   }
+
+  const filename = `${crypto.randomUUID()}.${ext}`;
+  const filepath = path.join(userDir, filename);
+
+  fs.writeFileSync(filepath, finalBuffer);
+
+  if (processed) {
+    console.log(`Image saved (processed): ${filepath}`);
+  } else {
+    console.log(`Image saved (original, no processing): ${filepath}`);
+  }
+
+  return `${userId}/${filename}`;
 }
 
 router.post("/", requireAuth, async (req: AuthRequest, res) => {
