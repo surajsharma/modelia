@@ -12,13 +12,13 @@ RUN apt-get update && \
     libvips-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pnpm (match version in CI - 10.18.2)
+# Install pnpm
 RUN npm install -g pnpm@10.18.2
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+# Copy package files and npmrc
+COPY package.json pnpm-lock.yaml* .npmrc* ./
 
-# Install dependencies (Sharp will build for the container's platform)
+# Install dependencies (build scripts will run via .npmrc)
 RUN pnpm install --frozen-lockfile
 
 # Copy source
