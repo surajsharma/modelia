@@ -12,8 +12,8 @@ RUN apt-get update && \
     libvips-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pnpm
-RUN npm install -g pnpm@8.15.0
+# Install pnpm (match version in CI - 10.18.2)
+RUN npm install -g pnpm@10.18.2
 
 # Copy package files
 COPY package.json pnpm-lock.yaml* ./
