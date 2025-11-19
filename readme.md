@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/surajsharma/modelia/actions/workflows/ci.yml/badge.svg)](https://github.com/surajsharma/modelia/actions/workflows/ci.yml)
 
-## docker
+## Running with docker
 
 - start the app:
     ```
@@ -14,16 +14,54 @@
     pnpm docker:down
     ```
 
-## backend
+## Backend
 
-### testing
+### Authentication
+- ✅ JWT-based auth with /auth/signup and /auth/login.
+- ✅ Password hashing (bcrypt).
+- ✅ Token-protected routes for logged-in users.
+
+### Generations API
+- ✅ POST /generations: accept { prompt, style, imageUpload }.
+- ✅ Simulate a generation delay (1–2 seconds).
+- ✅ 20% chance of returning { message: "Model overloaded" }.
+- ✅ On success, return { id, imageUrl, prompt, style, createdAt, status }.
+- ✅ GET /generations?limit=5: return the last 5 generations for the authenticated user.
+- ✅ Validate inputs with zod or joi.
+- ✅ Persist users and generations in a simple SQLite or PostgreSQL database.
+- ✅ Provide an OpenAPI spec (YAML) describing all endpoints.
+
+### Architecture & Quality
+- ✅ Clear folder structure (controllers, routes, models, services).
+- ✅ TypeScript strict mode enabled.
+- ✅ ESLint + Prettier configured.
+- ✅ Docker (optional): docker-compose up starts API + DB + FE.
+
+### Testing
 
 - run `npx jest` to run unit tests
 
+## Frontend
 
-## frontend
+### User Auth
+- ✅ Signup and Login forms connected to your backend via JWT.
+- ✅ Persist session locally (e.g., localStorage) and handle logout cleanly.
 
-### testing
+### Image Generation Studio
+- ✅ Upload an image (max 10MB, JPEG/PNG), show a live preview.
+- ✅ Input field for “Prompt” and dropdown for “Style” (3+ options).
+- ✅ On “Generate,” call your backend; show a spinner during processing.
+- ✅ Randomly simulate 20% “Model overloaded” errors — user should see a friendly retry message.
+- ✅ Allow retry (up to 3 times) and Abort mid-generation.
+- ✅ Display last 5 generations (fetched from backend) with preview thumbnails and timestamps.
+- ✅ Clicking a past generation restores it into the current workspace.
+
+### Accessibility & UX
+- ✅ Keyboard-friendly navigation, focus states, and ARIA roles.
+- ✅ Responsive layout that works well on desktop and mobile.
+- ✅ Show clear error messages and disabled states during network calls.
+
+### Testing
 
 - run `pnpm test` to run unit tests
 
@@ -36,6 +74,12 @@
 pnpm docker:test
 ```
 
+## Bonuses (optional)
+- Image resizing before upload (max width 1920px).
+- Code splitting and lazy loading.
+- Caching static assets and using a CDN.
+- Add a dark mode toggle.
+- Small UI animation (Framer Motion or CSS transitions).
 
 ## other deliverables
 
