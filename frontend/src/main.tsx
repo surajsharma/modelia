@@ -1,10 +1,10 @@
-import React, { JSX } from "react";
+import React, { type JSX } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "./index.css";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Studio from "./pages/Studio";
-import "./index.css";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   return localStorage.getItem("ai_token") ? children : <Navigate to="/login" />;

@@ -60,6 +60,7 @@ function saveImageToDisk(dataUrl: string, userId: number): string {
   return `${userId}/${filename}`;
 }
 
+
 router.post("/", requireAuth, async (req: AuthRequest, res) => {
   let imagePath: string | null = null;
 

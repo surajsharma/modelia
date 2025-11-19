@@ -27,3 +27,4 @@ export async function login(email: string, password: string) {
 export function logout() {
     localStorage.removeItem("ai_token");
 }
+

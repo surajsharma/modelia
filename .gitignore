@@ -1,1 +1,30 @@
+uploads/
+*.db
+
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+
+# Testing
+coverage/
+*.db
+
+# Environment
+.env
+.env.local
+
+# Uploads
+uploads/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

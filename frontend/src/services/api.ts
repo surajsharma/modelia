@@ -13,3 +13,8 @@ export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
     }
     return data as T;
 }
+
+
+export async function getCurrentUser() {
+    return api<{ id: number; email: string }>("/auth/me");
+}
