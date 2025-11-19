@@ -1,0 +1,19 @@
+{
+    "name": "modelia-e2e",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "test:e2e": "playwright test",
+        "docker:up": "docker compose up --build",
+        "docker:down": "docker compose down -v",
+        "docker:test": "docker compose up --build e2e",
+        "docker:logs:backend": "docker compose logs -f backend",
+        "docker:logs:frontend": "docker compose logs -f frontend",
+        "docker:logs:e2e": "docker compose logs -f e2e"
+    },
+    "devDependencies": {
+        "@playwright/test": "1.48.0",
+        "@types/node": "^20.10.0"
+    }
+}

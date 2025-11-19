@@ -1,0 +1,59 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - HOST=0.0.0.0
+      - JWT_SECRET=docker_test_secret
+      - DB_PATH=/app/data/data.db
+    volumes:
+      - backend-data:/app/data
+      - backend-uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - app-network
+
+  e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - CI=true
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    network_mode: "host"
+
+volumes:
+  backend-data:
+  backend-uploads:
+
+networks:
+  app-network:
+    driver: bridge

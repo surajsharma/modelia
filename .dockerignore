@@ -1,0 +1,23 @@
+node_modules
+*/node_modules
+.git
+.env*
+*.log
+
+# Don't copy these into container
+test-results
+playwright-report
+.playwright
+
+# Backend
+backend/data.db
+backend/uploads
+
+# Frontend
+frontend/dist
+frontend/node_modules
+
+# Keep these minimal
+!tests
+!backend/src
+!frontend/src

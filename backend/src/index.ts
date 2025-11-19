@@ -1,45 +1,51 @@
 import express from "express";
 import cors from "cors";
-import swaggerUi from 'swagger-ui-express';
-import YAML from 'yamljs';
 import authRoutes from "./routes/auth";
-import genRoutes from "./routes/generations";
+import generationRoutes from "./routes/generations";
 import { initDb } from "./models/db";
 import path from "path";
 
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: "12mb" }));
+app.use(express.json({ limit: "10mb" }));
 
-// Swagger documentation
-const swaggerDocument = YAML.load('./OPENAPI.yaml');
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// Serve uploaded files
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-(async () => {
-  await initDb();
+// Health check endpoint
+app.get("/", (req, res) => {
+  res.json({ status: "ok", message: "AI Studio Backend" });
+});
 
-  app.use("/auth", authRoutes);
-  app.use("/generations", genRoutes);
-  app.get("/", (_req, res) => res.json({ ok: true }));
-  app.use('/uploads', express.static('./uploads'));
-  app.use('/uploads/:userId/:filename', (req, res, next) => {
-    const requestedUserId = req.params.userId;
-    const filepath = path.join('./uploads', requestedUserId, req.params.filename);
-    res.sendFile(filepath, { root: '.' }, (err) => {
-      if (err) {
-        res.status(404).json({ message: 'Image not found' });
-      }
+// Routes
+app.use("/auth", authRoutes);
+app.use("/generations", generationRoutes);
+
+const PORT = Number(process.env.PORT || 4000);
+const HOST = process.env.HOST || '0.0.0.0';
+
+// Initialize database before starting server
+async function start() {
+  try {
+    console.log("🚀 Starting AI Studio Backend...");
+    console.log("📍 Environment:", {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT,
+      HOST,
+      DB_PATH: process.env.DB_PATH,
     });
-  });
 
-  const port = process.env.PORT ? Number(process.env.PORT) : 4000;
-  if (process.env.NODE_ENV !== "test") {
-    app.listen(port, () => {
-      console.log(`API listening ${port}`);
-      console.log(`API docs available at http://localhost:${port}/api-docs`);
+    await initDb();
+
+    app.listen(PORT, HOST, () => {
+      console.log(`✅ Backend running on http://${HOST}:${PORT}`);
+      console.log(`📡 Ready to accept connections`);
     });
+  } catch (error) {
+    console.error("❌ Failed to start server:", error);
+    process.exit(1);
   }
-})();
+}
 
-export default app;
+start();

@@ -28,3 +28,16 @@ uploads/
 # OS
 .DS_Store
 Thumbs.db
+
+# Root node_modules (if you run locally)
+/node_modules/
+/pnpm-lock.yaml
+/package-lock.json
+
+# Playwright (only if run locally, not needed for Docker)
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# Docker
+*.log

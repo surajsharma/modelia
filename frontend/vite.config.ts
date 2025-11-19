@@ -5,12 +5,25 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    host: '0.0.0.0',
     port: 5173,
+    strictPort: true,
     proxy: {
-      "/api": {
-        target: "http://localhost:4000",
+      '/api': {
+        target: 'http://backend:4000', // Use Docker service name
         changeOrigin: true,
-        rewrite: (p: string) => p.replace(/^\/api/, ""), // Add type annotation
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('Sending Request:', req.method, req.url, '=>', proxyReq.path);
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('Received Response:', proxyRes.statusCode, req.url);
+          });
+        },
       },
     },
   },
